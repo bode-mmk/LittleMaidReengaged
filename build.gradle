@@ -1,7 +1,15 @@
-sourceSets.main {
-	java.srcDirs project.projectDir.name
-	resources.srcDirs project.projectDir.name
+buildscript {
+    repositories {
+        jcenter()
+        maven { url = "http://files.minecraftforge.net/maven" }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+    }
 }
+apply plugin: 'net.minecraftforge.gradle.forge'
+//Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
+version = "8.1.6.141"
 jar {
 	doFirst {
 		archivesBaseName = "[1.9.4-1.10.x]LittleMaidReengaged"
@@ -13,25 +21,42 @@ jar {
 	}
 }
 
-task generateChangeLog << {
-	exec {
-		executable "bash"
-		args '-c', '"git log --date=short --pretty=format:\'%ad %an<%ae>%nHASH=%H%n%s%n%b%n\'' +
-				' | sed -E \'s/HASH=(.+)/\\* \\1/g\'' +
-				' | sed -E \'s/(.+)/\\t\\*\\t\\1/g\'' +
-				' | sed -E \'s/\\t\\*\\t([0-9]+-[0-9]+-[0-9]+.+)/\\1/g\' > ChangeLog"'
-	}
+sourceCompatibility = targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
+compileJava {
+    sourceCompatibility = targetCompatibility = '1.8'
 }
 
-// Set arguments -PgenCL to generate ChangeLog(git configure required)
-if (project.hasProperty('genCL')) {
-	generateChangeLog.execute()
+minecraft {
+    version = "1.12.2-14.23.5.2768"
+    runDir = "run"
+    mappings = "snapshot_20171003"
+    // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
 }
+
 
 tasks.withType(Jar) {compileJava.options.encoding = 'UTF-8'}
 tasks.withType(Jar) {compileApiJava.options.encoding = 'UTF-8'}
 
 // Replace ':EBLib***' to the project of EBLib in your workspace
-dependencies { compile project(':LittleMaidReengaged:EBLib') }
+dependencies { 
+	compile 'net.blacklab.lib:EBLib:6.1.6.9'
+	}
 
-version = "8.1.6.141"
+processResources {
+    // this will ensure that this task is redone when the versions change.
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+
+    // replace stuff in mcmod.info, nothing else
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+
+        // replace version and mcversion
+        expand 'version':project.version, 'mcversion':project.minecraft.version
+    }
+
+    // copy everything else except the mcmod.info
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
